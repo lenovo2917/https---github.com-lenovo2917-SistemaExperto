@@ -193,7 +193,10 @@
             $.post('./inferencia.php', function(response) {
                 const data = JSON.parse(response);
                 if (data.success) {
-                    let resultados = data.resultados.map(r => `La raza más probable es ${r.nombre} con un ${r.porcentaje.toFixed(2)}%`).join('<br>');
+                    let resultados = data.resultados.map(r => {
+                        let porcentaje = parseFloat(r.porcentaje);
+                        return `La raza más probable es ${r.nombre} con un ${porcentaje.toFixed(2)}%`;
+                    }).join('<br>');
                     showToast(resultados);
                 } else {
                     showToast(data.message);
