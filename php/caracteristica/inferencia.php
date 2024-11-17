@@ -49,8 +49,13 @@ function inferenciaDirecta($pdo) {
     return ['success' => true, 'resultados' => $resultados];
 }
 
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $response = inferenciaDirecta($pdo);
     echo json_encode($response);
 }
+
+
+
 ?>
