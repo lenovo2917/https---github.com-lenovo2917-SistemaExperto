@@ -172,44 +172,62 @@
 
             $('#continuarBtn').click(function() {
                 toastElement.hide();
-                setTimeout(showToast2, 500);
-            });
-        }
-
-        function showToast2() {
-            $('#toast2Container .toast-body').html(`
-                <button class="btn btn-success me-2" id="siBtn">Sí</button>
-                <button class="btn btn-danger me-2" id="noBtn">No</button>
-            `);
-
-            $('#toast2Container').show();
-
-            var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], {
-                autohide: false
-            });
-            toast2Element.show();
-
-            $('#siBtn').click(function() {
-                alert('Has seleccionado Sí');
-                toast2Element.hide();
-                $('#toast2Container').hide();
-            });
-
-            $('#noBtn').click(function() {
-                alert('Has seleccionado No');
-                toast2Element.hide();
-                $('#toast2Container').hide();
-                showToast3(); // Mostrar el nuevo toast3
+                showToast3(); // Pasar directamente al Toast3
             });
         }
 
         function showToast3() {
-            $('#toast3Container').show();
+            $.post('./inferencia.php', function(response) {
+                const data = JSON.parse(response);
 
-            var toast3Element = new bootstrap.Toast($('#toast3Container .toast')[0], {
-                autohide: false
+                if (data.success) {
+                    const razaMayorProb = data.resultados[0];
+                    const razaId = razaMayorProb.id;
+
+                    // Obtener las características faltantes
+                    $.ajax({
+                        url: './consultar_caracteristicas_faltantes.php',
+                        type: 'POST',
+                        data: { razaId: razaId },
+                        dataType: 'json',
+                        success: function(faltantes) {
+                            if (faltantes.length > 0) {
+                                const mensaje = `Tu raza tiene: ${faltantes.map(f => f.nombre).join(", ")}`;
+                                $('#toast2Container .toast-body').html(`
+                                    <p>${mensaje}</p>
+                                    <button class="btn btn-success me-2" id="siBtn">Sí</button>
+                                    <button class="btn btn-danger me-2" id="noBtn">No</button>
+                                `);
+
+                                $('#toast2Container').show();
+
+                                var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], {
+                                    autohide: false
+                                });
+                                toast2Element.show();
+
+                                $('#siBtn').click(function() {
+                                    $.post('./actualizar_pesos.php', { razaId: razaId, faltantes: faltantes.map(f => f.id) }, function(response) {
+                                        alert('Pesos actualizados con éxito.');
+                                        toast2Element.hide();
+                                        $('#toast2Container').hide();
+                                    });
+                                });
+
+                                $('#noBtn').click(function() {
+                                    alert('No se aplicaron cambios.');
+                                    toast2Element.hide();
+                                    $('#toast2Container').hide();
+                                });
+                            } else {
+                                alert('No hay características faltantes.');
+                            }
+                        }
+                    });
+                } else {
+                    alert(data.message);
+                }
             });
-            toast3Element.show();
         }
 
         $.ajax({
