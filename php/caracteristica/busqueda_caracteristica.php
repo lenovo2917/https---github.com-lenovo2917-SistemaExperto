@@ -109,7 +109,7 @@
                 <strong class="me-auto">Modulo de Explicacion</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div class="toast-body">
+            <div class=" modulo explicacion ">
                 <!-- Contenido del toast3 -->
                 <p>Por favor, explique por qué no corresponde a la raza con más probabilidad.</p>
             </div>
