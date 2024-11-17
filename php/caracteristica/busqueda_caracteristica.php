@@ -99,7 +99,19 @@
             <div class="toast-body text-center">
                 <button class="btn btn-success me-2" id="siBtn">Sí</button>
                 <button class="btn btn-danger me-2" id="noBtn">No</button>
-                <button class="btn btn-secondary" id="noseBtn">No sé</button>
+           </div>
+        </div>
+    </div>
+
+    <div id="toast3Container" class="toast-container position-fixed top-50 start-50 translate-middle p-3" style="display:none;">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Modulo de Explicacion</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <!-- Contenido del toast3 -->
+                <p>Por favor, explique por qué no corresponde a la raza con más probabilidad.</p>
             </div>
         </div>
     </div>
@@ -168,7 +180,6 @@
             $('#toast2Container .toast-body').html(`
                 <button class="btn btn-success me-2" id="siBtn">Sí</button>
                 <button class="btn btn-danger me-2" id="noBtn">No</button>
-                <button class="btn btn-secondary" id="noseBtn">No sé</button>
             `);
 
             $('#toast2Container').show();
@@ -178,11 +189,27 @@
             });
             toast2Element.show();
 
-            $('#siBtn, #noBtn, #noseBtn').click(function() {
-                alert('Has seleccionado ' + $(this).text());
+            $('#siBtn').click(function() {
+                alert('Has seleccionado Sí');
                 toast2Element.hide();
                 $('#toast2Container').hide();
             });
+
+            $('#noBtn').click(function() {
+                alert('Has seleccionado No');
+                toast2Element.hide();
+                $('#toast2Container').hide();
+                showToast3(); // Mostrar el nuevo toast3
+            });
+        }
+
+        function showToast3() {
+            $('#toast3Container').show();
+
+            var toast3Element = new bootstrap.Toast($('#toast3Container .toast')[0], {
+                autohide: false
+            });
+            toast3Element.show();
         }
 
         $.ajax({
