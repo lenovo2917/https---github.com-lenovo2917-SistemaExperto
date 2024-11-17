@@ -11,6 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['razaId' => $razaId, 'caracteristicaId' => $caracteristicaId]);
     }
 
-    echo json_encode(['success' => true, 'message' => 'Pesos actualizados.']);
+    echo json_encode(['success' => true]);
 }
 ?>

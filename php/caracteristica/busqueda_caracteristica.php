@@ -192,35 +192,49 @@
                         dataType: 'json',
                         success: function(faltantes) {
                             if (faltantes.length > 0) {
-                                const mensaje = `Tu raza tiene: ${faltantes.map(f => f.nombre).join(", ")}`;
-                                $('#toast2Container .toast-body').html(`
-                                    <p>${mensaje}</p>
-                                    <button class="btn btn-success me-2" id="siBtn">Sí</button>
-                                    <button class="btn btn-danger me-2" id="noBtn">No</button>
-                                `);
+                                let currentIndex = 0;
 
-                                $('#toast2Container').show();
+                                function showNextCaracteristica() {
+                                    if (currentIndex < faltantes.length) {
+                                        const caracteristica = faltantes[currentIndex];
+                                        const mensaje = `Tu raza tiene: ${caracteristica.nombre}?`;
+                                        $('#toast2Container .toast-body').html(`
+                                            <p>${mensaje}</p>
+                                            <button class="btn btn-success me-2" id="siBtn">Sí</button>
+                                            <button class="btn btn-danger me-2" id="noBtn">No</button>
+                                        `);
 
-                                var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], {
-                                    autohide: false
-                                });
-                                toast2Element.show();
+                                        $('#toast2Container').show();
 
-                                $('#siBtn').click(function() {
-                                    $.post('./actualizar_pesos.php', { razaId: razaId, faltantes: faltantes.map(f => f.id) }, function(response) {
-                                        alert('Pesos actualizados con éxito.');
-                                        toast2Element.hide();
-                                        $('#toast2Container').hide();
-                                    });
-                                });
+                                        var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], {
+                                            autohide: false
+                                        });
+                                        toast2Element.show();
 
-                                $('#noBtn').click(function() {
-                                    alert('No se aplicaron cambios.');
-                                    toast2Element.hide();
-                                    $('#toast2Container').hide();
-                                });
+                                        $('#siBtn').off('click').on('click', function() {
+                                            $.post('./actualizar_pesos.php', { razaId: razaId, faltantes: [caracteristica.id] }, function(response) {
+                                                currentIndex++;
+                                                showNextCaracteristica();
+                                            });
+                                        });
+
+                                        $('#noBtn').off('click').on('click', function() {
+                                            toast2Element.hide();
+                                            $('#toast2Container').hide();
+                                            $('#toast3Container').show();
+                                            var toast3Element = new bootstrap.Toast($('#toast3Container .toast')[0], {
+                                                autohide: false
+                                            });
+                                            toast3Element.show();
+                                        });
+                                    } else {
+                                        
+                                    }
+                                }
+
+                                showNextCaracteristica();
                             } else {
-                                alert('No hay características faltantes.');
+                               
                             }
                         }
                     });
