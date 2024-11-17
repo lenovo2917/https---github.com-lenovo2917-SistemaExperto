@@ -97,7 +97,6 @@
         <!-- Toast2 -->
         <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 500px; max-width: 800px;">
             <div class="toast-body text-center">
-                <!-- Aquí irá el mensaje del Toast2 -->
                 <button class="btn btn-success me-2" id="siBtn">Sí</button>
                 <button class="btn btn-danger me-2" id="noBtn">No</button>
                 <button class="btn btn-secondary" id="noseBtn">No sé</button>
@@ -109,29 +108,54 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     $(document).ready(function() {
-        function ajaxRequest(url, type, data, successCallback) {
+        function actualizarImagen(caracteristicaId) {
             $.ajax({
-                url: url,
-                type: type,
-                data: data,
+                url: './consultar_caracteristica.php',
+                type: 'POST',
+                data: {
+                    tipoConsulta: 'individual',
+                    id: caracteristicaId
+                },
                 dataType: 'json',
-                success: successCallback
+                success: function(data) {
+                    if (data && data.imagen) {
+                        $('#caracteristicaImagen').attr('src', 'data:image/jpeg;base64,' + data.imagen);
+                    }
+                }
             });
         }
 
-        function updateToastContent(selector, content) {
-            $(selector).html(content);
+        function actualizarBandera(caracteristicaId, bandera) {
+            $.ajax({
+                url: './actualizar_bandera.php',
+                type: 'POST',
+                data: {
+                    id: caracteristicaId,
+                    bandera: bandera
+                }
+            });
         }
 
         function showToast(message) {
-            updateToastContent('.toast-body', message);
-            var toastElement = new bootstrap.Toast($('.toast')[0], { autohide: false });
+            var toastBody = $('.toast-body');
+            toastBody.html(message);
+
+            var toastElement = new bootstrap.Toast($('.toast')[0], {
+                autohide: false
+            });
             toastElement.show();
+            
             $('.toast .btn-close').hide();
 
             $('#salirBtn').click(function() {
                 toastElement.hide();
-                ajaxRequest('./actualizar_bandera.php', 'POST', { reset: true });
+                $.ajax({
+                    url: './actualizar_bandera.php',
+                    type: 'POST',
+                    data: {
+                        reset: true
+                    }
+                });
             });
 
             $('#continuarBtn').click(function() {
@@ -141,13 +165,17 @@
         }
 
         function showToast2() {
-            updateToastContent('#toast2Container .toast-body', `
+            $('#toast2Container .toast-body').html(`
                 <button class="btn btn-success me-2" id="siBtn">Sí</button>
                 <button class="btn btn-danger me-2" id="noBtn">No</button>
                 <button class="btn btn-secondary" id="noseBtn">No sé</button>
             `);
+
             $('#toast2Container').show();
-            var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], { autohide: false });
+
+            var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], {
+                autohide: false
+            });
             toast2Element.show();
 
             $('#siBtn, #noBtn, #noseBtn').click(function() {
@@ -157,12 +185,18 @@
             });
         }
 
-        
-
-        ajaxRequest('./consultar_caracteristica.php', 'POST', { tipoConsulta: 'general' }, function(data) {
-            data.forEach(function(caracteristica) {
-                $('#caracteristicaSelect').append(new Option(caracteristica.nombre, caracteristica.id));
-            });
+        $.ajax({
+            url: './consultar_caracteristica.php',
+            type: 'POST',
+            data: {
+                tipoConsulta: 'general'
+            },
+            dataType: 'json',
+            success: function(data) {
+                data.forEach(function(caracteristica) {
+                    $('#caracteristicaSelect').append(new Option(caracteristica.nombre, caracteristica.id));
+                });
+            }
         });
 
         $('#caracteristicaSelect').change(function() {
@@ -170,13 +204,10 @@
             var caracteristicaNombre = $("#caracteristicaSelect option:selected").text();
 
             if ($('#caracteristicasTable tbody tr[data-id="' + caracteristicaId + '"]').length == 0) {
-                $('#caracteristicasTable tbody').append('<tr data-id="' + caracteristicaId + '"><td>' + caracteristicaNombre + '</td></tr>');
-                ajaxRequest('../caracteristica/consultar_caracteristica.php', 'POST', { tipoConsulta: 'individual', id: caracteristicaId }, function(data) {
-                    if (data && data.imagen) {
-                        $('#caracteristicaImagen').attr('src', 'data:image/jpeg;base64,' + data.imagen);
-                    }
-                });
-                ajaxRequest('./actualizar_bandera.php', 'POST', { id: caracteristicaId, bandera: 1 });
+                $('#caracteristicasTable tbody').append('<tr data-id="' + caracteristicaId + '"><td>' +
+                    caracteristicaNombre + '</td></tr>');
+                actualizarImagen(caracteristicaId);
+                actualizarBandera(caracteristicaId, 1);
             } else {
                 alert('El síntoma ya está seleccionado.');
             }
@@ -187,24 +218,23 @@
             var caracteristicaId = selectedRow.data('id');
             selectedRow.remove();
             $('#caracteristicaImagen').attr('src', '');
-            ajaxRequest('./actualizar_bandera.php', 'POST', { id: caracteristicaId, bandera: 0 });
+            actualizarBandera(caracteristicaId, 0);
         });
 
         $('#caracteristicasTable').on('click', 'tbody tr', function() {
             $(this).toggleClass('selected').siblings().removeClass('selected');
             var caracteristicaId = $(this).data('id');
-            ajaxRequest('./consultar_caracteristica.php', 'POST', { tipoConsulta: 'individual', id: caracteristicaId }, function(data) {
-                if (data && data.imagen) {
-                    $('#caracteristicaImagen').attr('src', 'data:image/jpeg;base64,' + data.imagen);
-                }
-            });
+            actualizarImagen(caracteristicaId);
         });
 
         $('#infereBtn').click(function() {
             $.post('./inferencia.php', function(response) {
                 const data = JSON.parse(response);
                 if (data.success) {
-                    let resultados = data.resultados.map(r => `La raza más probable es ${r.nombre} con un ${parseFloat(r.porcentaje).toFixed(2)}%`).join('<br>');
+                    let resultados = data.resultados.slice(0, 5).map(r => {
+                        let porcentaje = parseFloat(r.porcentaje);
+                        return `La raza más probable es ${r.nombre} con un ${porcentaje.toFixed(2)}%`;
+                    }).join('<br>');
                     showToast(resultados);
                 } else {
                     showToast(data.message);
