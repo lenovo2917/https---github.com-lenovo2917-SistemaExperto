@@ -250,6 +250,7 @@
                                         $('#siBtn').off('click').on('click', function() {
                                             $.post('./actualizar_pesos.php', {
                                                 caracteristicaId: caracteristica.id,
+                                                razaId: razaId,
                                                 bandera: 1
                                             }, function(response) {
                                                 currentIndex++;
@@ -258,9 +259,15 @@
                                         });
 
                                         $('#noBtn').off('click').on('click', function() {
-                                            toast2Element.hide();
-                                            $('#toast2Container').hide();
-                                            showToast4(razaId, razaMayorProb.nombre, faltantes);
+                                            $.post('./actualizar_pesos.php', {
+                                                caracteristicaId: caracteristica.id,
+                                                razaId: razaId,
+                                                bandera: 0
+                                            }, function(response) {
+                                                toast2Element.hide();
+                                                $('#toast2Container').hide();
+                                                showToast4(razaId, razaMayorProb.nombre, faltantes);
+                                            });
                                         });
 
                                     } else {
@@ -308,24 +315,35 @@
                                     let razaMayorProbPorcentaje = parseFloat(razaMayorProb.porcentaje).toFixed(2);
                                     $('#razaMayorProbabilidad').text(`${razaNombre}`);
 
-                                    let caracteristicasList = '';
-                                    faltantes.forEach(function(caracteristica) {
-                                        caracteristicasList += `<li>${caracteristica.nombre}</li>`;
-                                    });
-                                    $('#caracteristicasFaltantes').html(caracteristicasList);
+                                    // Consultar características faltantes actualizadas
+                                    $.ajax({
+                                        url: './consultar_caracteristicas_faltantes.php',
+                                        type: 'POST',
+                                        data: {
+                                            razaId: razaMayorProb.id
+                                        },
+                                        dataType: 'json',
+                                        success: function(faltantesActualizadas) {
+                                            let caracteristicasList = '';
+                                            faltantesActualizadas.forEach(function(caracteristica) {
+                                                caracteristicasList += `<li>${caracteristica.nombre}</li>`;
+                                            });
+                                            $('#caracteristicasFaltantes').html(caracteristicasList);
 
-                                    let razasActualizadasList = '';
-                                    newData.resultados.slice(0, 5).forEach(function(resultado) {
-                                        let porcentaje = parseFloat(resultado.porcentaje).toFixed(2);
-                                        let caracteristicas = resultado.caracteristicas.split(', ').map(c => `<li>${c}</li>`).join('');
-                                        razasActualizadasList += `<li>${resultado.nombre}: ${porcentaje}%<ul>${caracteristicas}</ul></li>`;
-                                    });
-                                    $('#razasActualizadas').html(razasActualizadasList);
+                                            let razasActualizadasList = '';
+                                            newData.resultados.slice(1, 5).forEach(function(resultado) { // Start from index 1 to skip the highest probability
+                                                let porcentaje = parseFloat(resultado.porcentaje).toFixed(2);
+                                                let caracteristicas = resultado.caracteristicas.split(', ').map(c => `<li>${c}</li>`).join('');
+                                                razasActualizadasList += `<li>${resultado.nombre}: ${porcentaje}%<ul>${caracteristicas}</ul></li>`;
+                                            });
+                                            $('#razasActualizadas').html(razasActualizadasList);
 
-                                    // Mostrar el toast4 con los nuevos datos
-                                    var toast4Element = new bootstrap.Toast($('#toast4Container .toast')[0]);
-                                    $('#toast4Container').show();
-                                    toast4Element.show();
+                                            // Mostrar el toast4 con los nuevos datos
+                                            var toast4Element = new bootstrap.Toast($('#toast4Container .toast')[0]);
+                                            $('#toast4Container').show();
+                                            toast4Element.show();
+                                        }
+                                    });
                                 } else {
                                     showToast(newData.message);
                                 }
@@ -398,4 +416,4 @@
 
 </body>
 
-</html>
+</html> 
