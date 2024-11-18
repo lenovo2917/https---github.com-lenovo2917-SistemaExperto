@@ -68,8 +68,7 @@
     <!-- Botón Regresar -->
     <div class="mt-auto d-flex justify-content-end p-3">
         <button class="btn btn-custom" onclick="window.history.back();">
-            <img src="../../iconos/flecha-izquierda.png" alt="Icono Regresar" class="me-2"
-                style="width: 20px; height: 20px;">
+            <img src="../../iconos/flecha-izquierda.png" alt="Icono Regresar" class="me-2" style="width: 20px; height: 20px;">
             Regresar
         </button>
     </div>
@@ -77,8 +76,7 @@
     <!-- Toast container (centrado en la pantalla) -->
     <div class="toast-container position-fixed top-50 start-50 translate-middle p-3">
         <!-- Toast -->
-        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true"
-            style="min-width: 500px; max-width: 800px;">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 500px; max-width: 800px;">
             <div class="toast-header">
                 <strong class="me-auto">Resultados</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -95,11 +93,9 @@
     </div>
 
     <!-- Toast2 container (centrado en la pantalla) -->
-    <div class="toast-container position-fixed top-50 start-50 translate-middle p-3" id="toast2Container"
-        style="display: none;">
+    <div class="toast-container position-fixed top-50 start-50 translate-middle p-3" id="toast2Container" style="display: none;">
         <!-- Toast2 -->
-        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true"
-            style="min-width: 500px; max-width: 800px;">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 500px; max-width: 800px;">
             <div class="toast-body text-center">
                 <button class="btn btn-success me-2" id="siBtn">Sí</button>
                 <button class="btn btn-danger me-2" id="noBtn">No</button>
@@ -107,14 +103,13 @@
         </div>
     </div>
 
-    <div id="toast3Container" class="toast-container position-fixed top-50 start-50 translate-middle p-3"
-        style="display:none;">
+    <div id="toast3Container" class="toast-container position-fixed top-50 start-50 translate-middle p-3" style="display:none;">
         <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
                 <strong class="me-auto">Modulo de Explicacion</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div class=" modulo explicacion ">
+            <div class="modulo explicacion">
                 <!-- Contenido del toast3 -->
                 <p>Por favor, explique por qué no corresponde a la raza con más probabilidad.</p>
             </div>
@@ -124,210 +119,172 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    $(document).ready(function() {
-        function actualizarImagen(caracteristicaId) {
+        $(document).ready(function() {
+            function actualizarImagen(caracteristicaId) {
+                $.ajax({
+                    url: './consultar_caracteristica.php',
+                    type: 'POST',
+                    data: { tipoConsulta: 'individual', id: caracteristicaId },
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data && data.imagen) {
+                            $('#caracteristicaImagen').attr('src', 'data:image/jpeg;base64,' + data.imagen);
+                        }
+                    }
+                });
+            }
+
+            function actualizarBandera(caracteristicaId, bandera) {
+                $.ajax({
+                    url: './actualizar_bandera.php',
+                    type: 'POST',
+                    data: { id: caracteristicaId, bandera: bandera }
+                });
+            }
+
+            function showToast(message) {
+                var toastBody = $('.toast-body');
+                toastBody.html(message);
+
+                var toastElement = new bootstrap.Toast($('.toast')[0], { autohide: false });
+                toastElement.show();
+
+                $('.toast .btn-close').hide();
+
+                $('#salirBtn').click(function() {
+                    toastElement.hide();
+                    $.ajax({
+                        url: './actualizar_bandera.php',
+                        type: 'POST',
+                        data: { reset: true }
+                    });
+                });
+
+                $('#continuarBtn').off('click').on('click', function() {
+                    toastElement.hide();
+                    if (!message.includes("la raza es")) {
+                        showToast3();
+                    }
+                });
+            }
+
+            function showToast3() {
+                $.post('./inferencia.php', function(response) {
+                    const data = JSON.parse(response);
+
+                    if (data.success) {
+                        const razaMayorProb = data.resultados[0];
+                        const razaId = razaMayorProb.id;
+
+                        $.ajax({
+                            url: './consultar_caracteristicas_faltantes.php',
+                            type: 'POST',
+                            data: { razaId: razaId },
+                            dataType: 'json',
+                            success: function(faltantes) {
+                                if (faltantes.length > 0) {
+                                    let currentIndex = 0;
+
+                                    function showNextCaracteristica() {
+                                        if (currentIndex < faltantes.length) {
+                                            const caracteristica = faltantes[currentIndex];
+                                            const mensaje = `Tu raza tiene: ${caracteristica.nombre}?`;
+                                            $('#toast2Container .toast-body').html(`
+                                                <p>${mensaje}</p>
+                                                <button class="btn btn-success me-2" id="siBtn">Sí</button>
+                                                <button class="btn btn-danger me-2" id="noBtn">No</button>
+                                            `);
+
+                                            $('#toast2Container').show();
+
+                                            var toast2Element = new bootstrap.Toast($('#toast2Container .toast')[0], { autohide: false });
+                                            toast2Element.show();
+
+                                            $('#siBtn').off('click').on('click', function() {
+                                                $.post('./actualizar_pesos.php', { razaId: razaId, faltantes: [caracteristica.id] }, function(response) {
+                                                    currentIndex++;
+                                                    showNextCaracteristica();
+                                                });
+                                            });
+
+                                            $('#noBtn').off('click').on('click', function() {
+                                                toast2Element.hide();
+                                                $('#toast2Container').hide();
+                                                $('#toast3Container').show();
+                                                var toast3Element = new bootstrap.Toast($('#toast3Container .toast')[0], { autohide: false });
+                                                toast3Element.show();
+                                            });
+                                        } else {
+                                            $('#toast2Container').hide();
+                                            const mensajeFinal = `Basado en las características seleccionadas, la raza es ${razaMayorProb.nombre}.`;
+                                            showToast(mensajeFinal);
+                                        }
+                                    }
+
+                                    showNextCaracteristica();
+                                }
+                            }
+                        });
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            }
+
             $.ajax({
                 url: './consultar_caracteristica.php',
                 type: 'POST',
-                data: {
-                    tipoConsulta: 'individual',
-                    id: caracteristicaId
-                },
+                data: { tipoConsulta: 'general' },
                 dataType: 'json',
                 success: function(data) {
-                    if (data && data.imagen) {
-                        $('#caracteristicaImagen').attr('src', 'data:image/jpeg;base64,' + data
-                            .imagen);
-                    }
-                }
-            });
-        }
-
-        function actualizarBandera(caracteristicaId, bandera) {
-            $.ajax({
-                url: './actualizar_bandera.php',
-                type: 'POST',
-                data: {
-                    id: caracteristicaId,
-                    bandera: bandera
-                }
-            });
-        }
-
-        function showToast(message) {
-    var toastBody = $('.toast-body');
-    toastBody.html(message);
-
-    var toastElement = new bootstrap.Toast($('.toast')[0], {
-        autohide: false
-    });
-    toastElement.show();
-
-    $('.toast .btn-close').hide();
-
-    // Botones de acción en el mensaje final
-    $('#salirBtn').click(function() {
-        toastElement.hide();
-        $.ajax({
-            url: './actualizar_bandera.php',
-            type: 'POST',
-            data: {
-                reset: true
-            }
-        });
-    });
-
-    $('#continuarBtn').off('click').on('click', function() {
-        toastElement.hide();
-        // Solo continúa mostrando Toast3 si no es un mensaje final
-        if (!message.includes("la raza es")) {
-            showToast3();
-        }
-    });
-}
-
-
-        function showToast3() {
-            $.post('./inferencia.php', function(response) {
-                const data = JSON.parse(response);
-
-                if (data.success) {
-                    const razaMayorProb = data.resultados[0];
-                    const razaId = razaMayorProb.id;
-
-                    // Obtener las características faltantes
-                    $.ajax({
-                        url: './consultar_caracteristicas_faltantes.php',
-                        type: 'POST',
-                        data: {
-                            razaId: razaId
-                        },
-                        dataType: 'json',
-                        success: function(faltantes) {
-                            if (faltantes.length > 0) {
-                                let currentIndex = 0;
-
-                                function showNextCaracteristica() {
-                                    if (currentIndex < faltantes.length) {
-                                        const caracteristica = faltantes[currentIndex];
-                                        const mensaje =
-                                            `Tu raza tiene: ${caracteristica.nombre}?`;
-                                        $('#toast2Container .toast-body').html(`
-                                            <p>${mensaje}</p>
-                                            <button class="btn btn-success me-2" id="siBtn">Sí</button>
-                                            <button class="btn btn-danger me-2" id="noBtn">No</button>
-                                        `);
-
-                                        $('#toast2Container').show();
-
-                                        var toast2Element = new bootstrap.Toast($(
-                                            '#toast2Container .toast')[0], {
-                                            autohide: false
-                                        });
-                                        toast2Element.show();
-
-                                        $('#siBtn').off('click').on('click', function() {
-                                            $.post('./actualizar_pesos.php', {
-                                                razaId: razaId,
-                                                faltantes: [caracteristica
-                                                    .id
-                                                ]
-                                            }, function(response) {
-                                                currentIndex++;
-                                                showNextCaracteristica();
-                                            });
-                                        });
-
-                                        $('#noBtn').off('click').on('click', function() {
-                                            toast2Element.hide();
-                                            $('#toast2Container').hide();
-                                            $('#toast3Container').show();
-                                            var toast3Element = new bootstrap.Toast(
-                                                $('#toast3Container .toast')[
-                                                0], {
-                                                    autohide: false
-                                                });
-                                            toast3Element.show();
-                                        });
-                                    } else {
-                                        // Cuando no hay más características por verificar
-                                        $('#toast2Container').hide();
-                                        const mensajeFinal =
-                                            `Basado en las características seleccionadas, la raza es ${razaMayorProb.nombre}.`;
-                                        showToast(mensajeFinal);
-                                    }
-                                }
-
-                                showNextCaracteristica();
-                            } else {
-
-                            }
-                        }
+                    data.forEach(function(caracteristica) {
+                        $('#caracteristicaSelect').append(new Option(caracteristica.nombre, caracteristica.id));
                     });
-                } else {
-                    alert(data.message);
                 }
             });
-        }
 
-        $.ajax({
-            url: './consultar_caracteristica.php',
-            type: 'POST',
-            data: {
-                tipoConsulta: 'general'
-            },
-            dataType: 'json',
-            success: function(data) {
-                data.forEach(function(caracteristica) {
-                    $('#caracteristicaSelect').append(new Option(caracteristica.nombre,
-                        caracteristica.id));
-                });
-            }
-        });
+            $('#caracteristicaSelect').change(function() {
+                var caracteristicaId = $(this).val();
+                var caracteristicaNombre = $("#caracteristicaSelect option:selected").text();
 
-        $('#caracteristicaSelect').change(function() {
-            var caracteristicaId = $(this).val();
-            var caracteristicaNombre = $("#caracteristicaSelect option:selected").text();
+                if ($('#caracteristicasTable tbody tr[data-id="' + caracteristicaId + '"]').length == 0) {
+                    $('#caracteristicasTable tbody').append('<tr data-id="' + caracteristicaId + '"><td>' + caracteristicaNombre + '</td></tr>');
+                    actualizarImagen(caracteristicaId);
+                    actualizarBandera(caracteristicaId, 1);
+                } else {
+                    alert('El síntoma ya está seleccionado.');
+                }
+            });
 
-            if ($('#caracteristicasTable tbody tr[data-id="' + caracteristicaId + '"]').length == 0) {
-                $('#caracteristicasTable tbody').append('<tr data-id="' + caracteristicaId + '"><td>' +
-                    caracteristicaNombre + '</td></tr>');
+            $('#quitarSintomaBtn').click(function() {
+                var selectedRow = $('#caracteristicasTable tbody tr.selected');
+                var caracteristicaId = selectedRow.data('id');
+                selectedRow.remove();
+                $('#caracteristicaImagen').attr('src', '');
+                actualizarBandera(caracteristicaId, 0);
+            });
+
+            $('#caracteristicasTable').on('click', 'tbody tr', function() {
+                $(this).toggleClass('selected').siblings().removeClass('selected');
+                var caracteristicaId = $(this).data('id');
                 actualizarImagen(caracteristicaId);
-                actualizarBandera(caracteristicaId, 1);
-            } else {
-                alert('El síntoma ya está seleccionado.');
-            }
-        });
+            });
 
-        $('#quitarSintomaBtn').click(function() {
-            var selectedRow = $('#caracteristicasTable tbody tr.selected');
-            var caracteristicaId = selectedRow.data('id');
-            selectedRow.remove();
-            $('#caracteristicaImagen').attr('src', '');
-            actualizarBandera(caracteristicaId, 0);
-        });
-
-        $('#caracteristicasTable').on('click', 'tbody tr', function() {
-            $(this).toggleClass('selected').siblings().removeClass('selected');
-            var caracteristicaId = $(this).data('id');
-            actualizarImagen(caracteristicaId);
-        });
-
-        $('#infereBtn').click(function() {
-            $.post('./inferencia.php', function(response) {
-                const data = JSON.parse(response);
-                if (data.success) {
-                    let resultados = data.resultados.slice(0, 5).map(r => {
-                        let porcentaje = parseFloat(r.porcentaje);
-                        return `La raza más probable es ${r.nombre} con un ${porcentaje.toFixed(2)}%`;
-                    }).join('<br>');
-                    showToast(resultados);
-                } else {
-                    showToast(data.message);
-                }
+            $('#infereBtn').click(function() {
+                $.post('./inferencia.php', function(response) {
+                    const data = JSON.parse(response);
+                    if (data.success) {
+                        let resultados = data.resultados.slice(0, 5).map(r => {
+                            let porcentaje = parseFloat(r.porcentaje);
+                            return `La raza más probable es ${r.nombre} con un ${porcentaje.toFixed(2)}%`;
+                        }).join('<br>');
+                        showToast(resultados);
+                    } else {
+                        showToast(data.message);
+                    }
+                });
             });
         });
-    });
     </script>
 
 </body>
