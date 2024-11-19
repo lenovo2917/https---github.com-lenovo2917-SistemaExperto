@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../../css/main.css">
-    <title>Búsqueda por Síntomas</title>
+    <title>Búsqueda por caracteristicas</title>
 </head>
 
 <body class="d-flex flex-column min-vh-100">
@@ -18,7 +18,7 @@
                 <!-- Selección de Síntoma -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <label for="caracteristicaSelect" class="form-label">Seleccione un síntoma</label>
+                        <label for="caracteristicaSelect" class="form-label">Seleccione una caracteristica</label>
                         <select id="caracteristicaSelect" class="form-select form-select-lg">
                             <!-- Aquí se llenarán los síntomas desde la base de datos -->
                         </select>
@@ -28,12 +28,12 @@
                 <!-- Síntomas Seleccionados -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <h3 class="text-center">Síntomas seleccionados</h3>
+                        <h3 class="text-center"> caracteristicas seleccionadas</h3>
                         <div class="table-responsive">
                             <table class="table table-bordered table-hover" id="caracteristicasTable">
                                 <thead class="table-dark">
                                     <tr>
-                                        <th>Síntoma</th>
+                                        <th>Caracteristicas</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -52,7 +52,7 @@
                 <!-- Botones -->
                 <div class="row">
                     <div class="col-12 mb-3">
-                        <button id="quitarSintomaBtn" class="btn btn-danger w-100 btn-lg">Quitar Síntoma</button>
+                        <button id="quitarSintomaBtn" class="btn btn-danger w-100 btn-lg">Quitar Caracteristica</button>
                     </div>
                     <div class="col-12 mb-3">
                         <button id="infereBtn" class="btn btn-warning w-100 btn-lg">Infere</button>
@@ -114,37 +114,42 @@
         <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
                 <strong class="me-auto">Modulo de Explicacion</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                
             </div>
             <div class=" modulo explicacion ">
                 <!-- Contenido del toast3 -->
 
             </div>
+            <button class="btn btn-secondary" id="salirBtn">Salir</button>
         </div>
     </div>
+<!-- MODULO DE EXPLICACION PARA EL NO (toast4) -->
+<div id="toast4Container" class="toast-container position-fixed top-50 start-50 translate-middle p-3" style="display:none;">
+    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Modulo de Explicacion para el NO</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="modulo">
+            <p>No es posible que sea esta raza: <span id="razaMayorProbabilidad"></span> porque se necesitan estas más características:</p>
+            <ul id="caracteristicasFaltantes"></ul>
+            <p>Razas con mayor probabilidad:</p>
+            <ol id="razasActualizadas"></ol>
+            <button class="btn btn-secondary" id="salirToast4Btn">Salir</button>
+        </div>
+    </div>
+</div>
 
-    <!-- MODULO DE EXPLICACION PARA EL NO (toast4) -->
-    <div id="toast4Container" class="toast-container position-fixed top-50 start-50 translate-middle p-3"
-        style="display:none;">
-        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <strong class="me-auto">Modulo de Explicacion para el NO</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="modulo">
-                <p>No es posible que sea esta raza: <span id="razaMayorProbabilidad"></span> porque se necesitan estas mas caracteristicas:</p>
-                <ul id="caracteristicasFaltantes"></ul>
-                <p>Razas con mayor probabilidad:</p>
-                <ol id="razasActualizadas"></ol>
-            </div>
-        </div>
-    </div>
+
 
 
 
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
     $(document).ready(function() {
         function actualizarImagen(caracteristicaId) {
@@ -331,7 +336,7 @@
                                             $('#caracteristicasFaltantes').html(caracteristicasList);
 
                                             let razasActualizadasList = '';
-                                            newData.resultados.slice(1, 5).forEach(function(resultado) { // Start from index 1 to skip the highest probability
+                                            newData.resultados.slice(1, 6).forEach(function(resultado) { 
                                                 let porcentaje = parseFloat(resultado.porcentaje).toFixed(2);
                                                 let caracteristicas = resultado.caracteristicas.split(', ').map(c => `<li>${c}</li>`).join('');
                                                 razasActualizadasList += `<li>${resultado.nombre}: ${porcentaje}%<ul>${caracteristicas}</ul></li>`;
@@ -414,6 +419,76 @@
     });
     </script>
 
+<script>
+$(document).ready(function() {
+    $('#salirToast4Btn').click(function() {
+        var toast4Element = new bootstrap.Toast($('#toast4Container .toast')[0]);
+        toast4Element.hide();
+    });
+
+    function showToast4(razaId, razaNombre, faltantes) {
+        $.post('./inferencia.php', function(response) {
+            const data = JSON.parse(response);
+
+            if (data.success) {
+                $.ajax({
+                    url: './actualizar_bandera.php',
+                    type: 'POST',
+                    data: {
+                        razaId: razaId,
+                        bandera: 1
+                    },
+                    success: function() {
+                        // Inferir nuevamente para obtener nuevos datos
+                        $.post('./inferencia.php', function(newResponse) {
+                            const newData = JSON.parse(newResponse);
+                            if (newData.success) {
+                                let razaMayorProb = newData.resultados[0];
+                                let razaMayorProbName = razaMayorProb.nombre;
+                                let razaMayorProbPorcentaje = parseFloat(razaMayorProb.porcentaje).toFixed(2);
+                                $('#razaMayorProbabilidad').text(`${razaNombre}`);
+
+                                // Consultar características faltantes actualizadas
+                                $.ajax({
+                                    url: './consultar_caracteristicas_faltantes.php',
+                                    type: 'POST',
+                                    data: {
+                                        razaId: razaMayorProb.id
+                                    },
+                                    dataType: 'json',
+                                    success: function(faltantesActualizadas) {
+                                        let caracteristicasList = '';
+                                        faltantesActualizadas.forEach(function(caracteristica) {
+                                            caracteristicasList += `<li>${caracteristica.nombre}</li>`;
+                                        });
+                                        $('#caracteristicasFaltantes').html(caracteristicasList);
+
+                                        let razasActualizadasList = '';
+                                        newData.resultados.slice(1, 5).forEach(function(resultado) { 
+                                            let porcentaje = parseFloat(resultado.porcentaje).toFixed(2);
+                                            let caracteristicas = resultado.caracteristicas.split(', ').map(c => `<li>${c}</li>`).join('');
+                                            razasActualizadasList += `<li>${resultado.nombre}: ${porcentaje}%<ul>${caracteristicas}</ul></li>`;
+                                        });
+                                        $('#razasActualizadas').html(razasActualizadasList);
+
+                                        // Mostrar el toast4 con los nuevos datos
+                                        var toast4Element = new bootstrap.Toast($('#toast4Container .toast')[0]);
+                                        $('#toast4Container').show();
+                                        toast4Element.show();
+                                    }
+                                });
+                            } else {
+                                showToast(newData.message);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+});
+</script>
+
 </body>
 
-</html> 
+</html>
